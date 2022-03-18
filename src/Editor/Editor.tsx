@@ -11,7 +11,8 @@ import { setAttr } from "./utils";
 const Button = () => {
 	return (
 		<div className="wrapper">
-			<div data-mkEditable="button">sds</div>
+			<div data-mkEditable="button">sfsadas</div>
+			<div className="status">Click to edit</div>
 		</div>
 	);
 };
@@ -22,12 +23,26 @@ const Text = () => {
 			<h2 data-mkEditable="text">
 				<span>I'm h2 text</span>
 			</h2>
+			{/* TODO h2 19px */}
+			<div className="status">Editing</div>
 		</div>
 	);
 };
 
 const Text2 = () => {
-	return <h2 data-mkEditable="text" className="isEmpty"></h2>;
+	return (
+		<div className="wrapper">
+			<h2 data-mkEditable="text" className="isEmpty"></h2>
+			<div
+				className="status"
+				style={{
+					cursor: "pointer",
+				}}
+			>
+				click to edit
+			</div>
+		</div>
+	);
 };
 
 const sendData = (data: {

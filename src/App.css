@@ -10,7 +10,61 @@ h2 {
   --badge-bg: #5A67CB;
 }
 
+.wrapper {
+  position: relative;
+  width: 200px;
+  display: flex;
+}
 
+
+.status {
+  position: absolute;
+  left: -4px;
+  top: 0;
+  transform: translateY(calc(-100% - 5px));
+  background-color: var(--badge-bg);
+  padding: 4px;
+  border-radius: 2px;
+  opacity: 0;
+  visibility: hidden;
+  transition: 0.2s all cubic-bezier(0.075, 0.82, 0.165, 1);
+  pointer-events: none;
+
+  
+  line-height: 1.2;
+  font-size: 12px;
+  font-weight: normal;
+  color: white;
+}
+
+.hoverActive + .status {
+
+  opacity: 1;
+  visibility: visible;
+}
+
+.editingActive + .status {
+  opacity: 1;
+  visibility: visible;
+  /* content: 'Editing'; */
+}
+
+[data-mkEditable].isEmpty:not(.editingActive) + .status {
+  opacity: 1;
+  visibility: visible;
+  content: 'Click to edit';
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 10px;
+}
+
+[data-mkEditable].isEmpty:not(.editingActive):hover + .status {
+  background-color: black;
+  cursor: pointer;
+}
 
 
 /* test above */
@@ -71,7 +125,7 @@ div[data-mkEditable] {
 }
 
 /* status badge */
-[data-mkEditable]::after {
+/* [data-mkEditable]::after {
   position: absolute;
   left: -4px;
   top: 0;
@@ -89,18 +143,18 @@ div[data-mkEditable] {
   font-size: 12px;
   font-weight: normal;
   color: white;
-}
+} */
 
 [data-mkEditable].hoverActive::before {
   opacity: 1;
   visibility: visible;
 }
-
+/* 
 [data-mkEditable].hoverActive::after {
   content: 'click to edit';
   opacity: 1;
   visibility: visible;
-}
+} */
 
 
 /* Editing */
@@ -108,11 +162,11 @@ div[data-mkEditable] {
   background-color: rgba(147, 172, 226, 0.712);
 }
 
-[data-mkEditable].editingActive::after {
+/* [data-mkEditable].editingActive::after {
   opacity: 1;
   visibility: visible;
   content: 'Editing';
-}
+} */
 
 [data-mkEditable].editingActive::before {
   opacity: 1;
@@ -134,7 +188,7 @@ div[data-mkEditable] {
   background: rgba(90, 103, 203, 0.2);
 }
 
-[data-mkEditable].isEmpty:not(.editingActive)::after {
+/* [data-mkEditable].isEmpty:not(.editingActive)::after {
   opacity: 1;
   visibility: visible;
   content: 'Click to edit';
@@ -149,7 +203,7 @@ div[data-mkEditable] {
 [data-mkEditable].isEmpty:not(.editingActive):hover::after {
   background-color: black;
   cursor: pointer;
-}
+} */
 
 [data-mkEditable].isEmpty:not(.editingActive){
   cursor: pointer;
