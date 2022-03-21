@@ -6,43 +6,88 @@ import React, {
 	forwardRef,
 } from "react";
 import { render, unmountComponentAtNode } from "react-dom";
-import { setAttr } from "./utils";
+import { setAttr, getComputedStyle, wrap } from "./utils";
+import { MKClass } from "./constant";
+import { style } from "./style";
+import {
+	BasicEditable,
+	FormEditable,
+	AbstractEditable,
+	resetEditable,
+	getActiveEditable,
+} from "./Basic";
+import { mount } from "./components/UI";
 
 const Button = () => {
 	return (
-		<div className="wrapper">
-			<div data-mkEditable="button">sfsadas</div>
-			<div className="status">Click to edit</div>
+		<div data-mkeditable="button">
+			<span>sfsadassfsadas</span>
 		</div>
 	);
 };
 
 const Text = () => {
 	return (
-		<div className="wrapper">
-			<h2 data-mkEditable="text">
-				<span>I'm h2 text</span>
-			</h2>
-			{/* TODO h2 19px */}
-			<div className="status">Editing</div>
-		</div>
+		<h2 data-mkeditable="text">
+			<span>I'm h2 text</span>
+		</h2>
 	);
 };
 
 const Text2 = () => {
+	return <h2 data-mkeditable="text" className="isEmpty"></h2>;
+};
+
+const Tab = () => {
 	return (
-		<div className="wrapper">
-			<h2 data-mkEditable="text" className="isEmpty"></h2>
-			<div
-				className="status"
-				style={{
-					cursor: "pointer",
-				}}
-			>
-				click to edit
-			</div>
+		<div
+			data-mkeditable="text"
+			style={{
+				writingMode: "vertical-lr",
+				position: "fixed",
+				left: "0",
+				bottom: "35%",
+			}}
+		>
+			Get 10% off
 		</div>
 	);
+};
+
+const FormComp = () => {
+	return (
+		<form data-mkeditable="form">
+			<div>
+				<input type="text" />
+				<input type="text" />
+			</div>
+			<input type="text" />
+		</form>
+	);
+};
+
+const Com1 = () => {
+	return (
+		<>
+			<Button />
+			<Text />
+			<Text2 />
+			<FormComp />
+		</>
+	);
+};
+
+const Com2 = () => {
+	return (
+		<>
+			<Button />
+			<FormComp />
+		</>
+	);
+};
+
+const Comp = ({ num }: { num: number }) => {
+	return num === 0 ? <Com1 /> : <Com2 />;
 };
 
 const sendData = (data: {
@@ -50,139 +95,35 @@ const sendData = (data: {
 	prevTarget?: HTMLElement;
 	type: string;
 }) => {
-	console.log(data.target?.nodeType, data.type);
+	// console.log(data.target?.nodeType, data.type);
 };
 
 const Editor = () => {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	const editingElRef = useRef<HTMLElement | null>(null);
+	const currentEditalbeComp = useRef<AbstractEditable[]>([]);
+	// const editingElRef = useRef<HTMLElement | null>(null);
 
-	const handleBlur = useCallback((e) => {}, []);
+	const mountedRef = useRef<any>();
 
-	const handleEnter = useCallback((e) => {
-		const target = (e.target as HTMLElement).closest("[data-mkEditable]")!;
-		// only set when not current editing element
-		editingElRef.current !== target && target.classList.add("hoverActive");
-	}, []);
-
-	const handleInput = useCallback((e) => {
-		// TODO event delegation
-		// let t;
-		// while(e.target !== editingElRef.current || e.target.parentNode) {
-		//     if(e.target.type === '') {
-		//         t = e.target;
-		//         break;
-		//     }
-		// }
-
-		// if(!t) {
-		//     return
-		// }
-
-		const target = e.target as HTMLElement;
-
-		const isEmpty =
-			target.innerHTML === "" ||
-			target.innerHTML.replace(/s/, "") === "<br>";
-
-		console.log(target.innerHTML);
-		if (isEmpty) {
-			console.log("woops empty content");
-
-			// when innerHtml is empty, will auto insert <br>
-			if (target.innerHTML.replace(/s/, "") === "<br>") {
-				target.innerHTML = "";
-			}
-			target.classList.add("isEmpty");
-		} else {
-			if (target.classList.contains("isEmpty")) {
-				target.classList.remove("isEmpty");
-			}
-		}
-	}, []);
-
-	const handleLeave = useCallback((e) => {
-		const target = (e.target as HTMLElement).closest("[data-mkEditable]")!;
-		// only set when not current editing element
-		editingElRef.current !== target &&
-			target.classList.remove("hoverActive");
-	}, []);
-
-	const handleClick = useCallback((e) => {
-		console.log("ckick");
-		const target = (e.target as HTMLElement).closest(
-			"[data-mkEditable]"
-		)! as HTMLElement;
-
-		if (editingElRef.current) {
-			// click again in current editing el
-			if (editingElRef.current === target) {
-				return;
-			}
-			let prevTarget = editingElRef.current;
-
-			// exist other active editing element
-			// remove style from current editing element
-			editingElRef.current.classList.remove("editingActive");
-			// remove hover style and set editing style to clicked
-			editingElRef.current = target;
-			editingElRef.current.classList.remove("hoverActive");
-			editingElRef.current.classList.add("editingActive");
-			sendData({
-				target: editingElRef.current,
-				prevTarget,
-				type: "change_editing_target",
-			});
-		} else {
-			editingElRef.current = target;
-			editingElRef.current.classList.remove("hoverActive");
-			editingElRef.current.classList.add("editingActive");
-			sendData({
-				target: editingElRef.current,
-				type: "editing",
-			});
-		}
-	}, []);
-
-	const attachEvents = useCallback(
-		(children: HTMLElement[]) => {
-			children.forEach((el) => {
-				el.addEventListener("mouseenter", handleEnter);
-				el.addEventListener("mouseleave", handleLeave);
-				el.addEventListener("click", handleClick);
-				el.addEventListener("blur", handleBlur);
-				el.addEventListener("input", handleInput);
-				// el.addEventListener("focus", handleFocus);
-			});
-		},
-		[handleEnter, handleLeave, handleClick]
-	);
-
-	const removeEvents = useCallback(
-		(children: HTMLElement[]) => {
-			children.forEach((el) => {
-				el.removeEventListener("mouseenter", handleEnter);
-				el.removeEventListener("mouseleave", handleLeave);
-				el.removeEventListener("click", handleClick);
-				el.removeEventListener("blur", handleBlur);
-				el.removeEventListener("input", handleInput);
-			});
-		},
-		[handleEnter, handleLeave, handleClick]
-	);
+	const [updated, setUpdate] = useState(0);
 
 	const handleDocumentClick = useCallback((e) => {
 		// delegate onBlur to document
-		// because blur event on [data-mkEditable] conflict with onClick event
-		const target = (e.target as HTMLElement).closest("[data-mkEditable]")!;
 
-		if (target || !editingElRef.current) return;
+		const target = (e.target as HTMLElement).closest(
+			`.${MKClass.mkEditableWrapper}`
+		);
 
-		const el = editingElRef.current as HTMLElement;
+		// if click on editable element or no current element being editing
+		// keep passing event
+		if (target || !BasicEditable.activeEditable) return true;
+
+		const el = BasicEditable.activeEditable.getNode() as HTMLElement;
+		// reset style
 		const classes = ["editingActive", "hoverActive"];
 		classes.forEach((cls) => el.classList.remove(cls));
 
-		editingElRef.current = null;
+		resetEditable();
 
 		sendData({
 			target: null,
@@ -190,58 +131,105 @@ const Editor = () => {
 		});
 	}, []);
 
+	// useEffect(() => {
+	// 	if (!containerRef.current) return;
+
+	// 	// Com1 is like Popup, pure UI component
+
+	// 	if (!mountedRef.current) {
+	// 		const root = containerRef.current;
+
+	// 		mountedRef.current = mount(root, () => {
+	// 			if (!containerRef.current) return;
+
+	// 			const editableNodes = root.querySelectorAll(
+	// 				MKClass.dataEditableSelector
+	// 			);
+
+	// 			// only element node
+	// 			const childEls = [...editableNodes];
+
+	// 			childEls.forEach((el) => {
+	// 				let editable: AbstractEditable;
+	// 				if (el.nodeName === "FORM") {
+	// 					editable = new FormEditable(el as HTMLElement);
+	// 				} else {
+	// 					editable = new BasicEditable(el as HTMLElement);
+	// 				}
+	// 				editable.initialize();
+	// 				currentEditalbeComp.current.push(editable);
+	// 			});
+
+	// 			document.addEventListener("click", handleDocumentClick);
+	// 		});
+	// 	} else {
+	// 		mountedRef.current.update(updated);
+	// 	}
+
+	// 	return () => {
+	// 		currentEditalbeComp.current.forEach((basicEditable) => {
+	// 			basicEditable.destroy();
+	// 		});
+	// 		currentEditalbeComp.current = [];
+	// 		document.removeEventListener("click", handleDocumentClick);
+	// 		mountedRef.current.unmount();
+	// 	};
+	// }, [updated]);
+
 	useEffect(() => {
 		if (!containerRef.current) return;
-		let childEls: Element[];
 
-		render(
-			<>
-				<Button />
-				<Text />
-				<Text2 />
-			</>,
-			containerRef.current,
-			() => {
-				if (!containerRef.current) return;
-				const editableNodes =
-					containerRef.current.querySelectorAll("[data-mkEditable]");
+		const root = containerRef.current;
 
-				// only element node
-				childEls = [...editableNodes];
+		// Com1 is like Popup, pure UI component
+		render(<Com1 />, root, () => {
+			if (!containerRef.current) return;
 
-				console.log(childEls.length, "total children nums");
+			const editableNodes = root.querySelectorAll(
+				MKClass.dataEditableSelector
+			);
 
-				// contentEditable
-				childEls.forEach((el) => {
-					el.setAttribute("contentEditable", "true");
-				});
+			// only element node
+			const childEls = [...editableNodes];
 
-				attachEvents(childEls as HTMLElement[]);
+			childEls.forEach((el) => {
+				let editable: AbstractEditable;
+				if (el.nodeName === "FORM") {
+					editable = new FormEditable(el as HTMLElement);
+				} else {
+					editable = new BasicEditable(el as HTMLElement);
+				}
+				editable.initialize();
+				currentEditalbeComp.current.push(editable);
+			});
 
-				// TODO use document for test only, may change host
-				document.addEventListener("click", handleDocumentClick);
-			}
-		);
+			document.addEventListener("click", handleDocumentClick);
+		});
 
 		return () => {
-			removeEvents((childEls as HTMLElement[]) || []);
+			currentEditalbeComp.current.forEach((basicEditable) => {
+				basicEditable.destroy();
+			});
+			currentEditalbeComp.current = [];
 			document.removeEventListener("click", handleDocumentClick);
-			containerRef.current &&
-				unmountComponentAtNode(containerRef.current);
+			root && unmountComponentAtNode(root);
 		};
-	}, []);
+	}, [updated]);
 
 	return (
-		<div
-			ref={containerRef}
-			style={{
-				width: 300,
-				display: "flex",
-				justifyItems: "center",
-				alignItems: "center",
-				flexDirection: "column",
-			}}
-		></div>
+		<>
+			<div
+				ref={containerRef}
+				style={{
+					width: 300,
+					display: "flex",
+					justifyItems: "center",
+					alignItems: "center",
+					flexDirection: "column",
+				}}
+			></div>
+			<button onClick={() => setUpdate((pre) => pre + 1)}>update</button>
+		</>
 	);
 };
 

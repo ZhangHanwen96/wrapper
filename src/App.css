@@ -4,13 +4,24 @@ p {
 }
 h2 {
   font-family: Lato;
-  background-color: aliceblue;
-}
-:root {
-  --badge-bg: #5A67CB;
+  background-color: rgb(207, 119, 134);
 }
 
-.wrapper {
+input {
+  outline: none;
+  /* background: #FFFFFF;
+border: 1px solid #EFEFF1;
+box-sizing: border-box;
+border-radius: 8px; */
+}
+
+:root {
+  --badge-bg: #5A67CB;
+  --mask-offsetMargin: 2;
+  --selection-color: #2c6ecb1c;
+}
+
+.mkeditable-wrapper {
   position: relative;
   width: 200px;
   display: flex;
@@ -19,49 +30,45 @@ h2 {
 
 .status {
   position: absolute;
-  left: -4px;
-  top: 0;
-  transform: translateY(calc(-100% - 5px));
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   background-color: var(--badge-bg);
-  padding: 4px;
-  border-radius: 2px;
+  padding: 4px 10px;
+  border-radius: 10px;
   opacity: 0;
   visibility: hidden;
   transition: 0.2s all cubic-bezier(0.075, 0.82, 0.165, 1);
-  pointer-events: none;
-
-  
+  /* pointer-events: none; */
   line-height: 1.2;
   font-size: 12px;
   font-weight: normal;
   color: white;
-}
-
-.hoverActive + .status {
-
-  opacity: 1;
-  visibility: visible;
-}
-
-.editingActive + .status {
-  opacity: 1;
-  visibility: visible;
-  /* content: 'Editing'; */
-}
-
-[data-mkEditable].isEmpty:not(.editingActive) + .status {
-  opacity: 1;
-  visibility: visible;
-  content: 'Click to edit';
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
   cursor: pointer;
-  padding: 4px 10px;
-  border-radius: 10px;
+  white-space: nowrap;
 }
 
-[data-mkEditable].isEmpty:not(.editingActive):hover + .status {
+/* .hoverActive + .status {
+  opacity: 1;
+  visibility: visible;
+} */
+
+/* .editingActive + .status {
+  opacity: 1;
+  visibility: visible;
+} */
+
+[data-mkeditable].isEmpty:not(.editingActive) + .status {
+  opacity: 1;
+  visibility: visible;
+}
+
+[data-mkeditable].isEmpty:not(.editingActive):hover + .status {
+  background-color: black;
+  cursor: pointer;
+}
+
+[data-mkeditable].isEmpty:not(.editingActive) + .status:hover {
   background-color: black;
   cursor: pointer;
 }
@@ -69,34 +76,35 @@ h2 {
 
 /* test above */
 
-[data-mkEditable] {
+[data-mkeditable] {
   position: relative;
   cursor: text;
   width: 100%;
   /* transition: 1s all cubic-bezier(0.075, 0.82, 0.165, 1); */
 }
 
-div[data-mkEditable] {
+
+div[data-mkeditable] {
   line-height: 35px;
 }
 
 /* remove input default outline */
-[data-mkEditable]:focus {
+[data-mkeditable]:focus {
   outline: none;
 }
 
-[data-mkEditable='button']{
+[data-mkeditable='button']{
   width: 200px;
   min-height: 35px;
   outline: none;
   border: none;
   border-radius: 5px;
-  background-color: rgb(104, 94, 94);
+  background-color: rgb(17, 16, 16);
   color: white;
 }
 
 /* mask */
-[data-mkEditable]::before {
+[data-mkeditable]::before {
   content: '';
   position: absolute;
   left: 0;
@@ -106,7 +114,7 @@ div[data-mkEditable] {
   background-color: rgba(63, 76, 172, 0.2);
   border: 1px solid #5A67CB;
   /* padding: 4px; */
-  margin: -4px;
+  margin: calc(var(--mask-offsetMargin) * -1px);
 
   transition: 0.2s all cubic-bezier(0.075, 0.82, 0.165, 1);
   transform: translate(0, 0);
@@ -120,19 +128,19 @@ div[data-mkEditable] {
 }
 
 /* hide mask */
-[data-mkEditable='button']::before {
+[data-mkeditable='button']::before {
   background-color: transparent;
 }
 
 /* status badge */
-/* [data-mkEditable]::after {
+[data-mkeditable]::after {
   position: absolute;
-  left: -4px;
+  left: calc(var(--mask-offsetMargin) * -1px);
   top: 0;
-  transform: translateY(calc(-100% - 5px));
+  transform: translateY(calc(-100% - 2px));
   background-color: var(--badge-bg);
   padding: 4px;
-  border-radius: 2px;
+  border-radius: 4px 4px 0 0;
   opacity: 0;
   visibility: hidden;
   transition: 0.2s all cubic-bezier(0.075, 0.82, 0.165, 1);
@@ -143,44 +151,45 @@ div[data-mkEditable] {
   font-size: 12px;
   font-weight: normal;
   color: white;
-} */
+}
 
-[data-mkEditable].hoverActive::before {
+[data-mkeditable].hoverActive::before {
   opacity: 1;
   visibility: visible;
 }
-/* 
-[data-mkEditable].hoverActive::after {
+
+[data-mkeditable].hoverActive::after {
   content: 'click to edit';
   opacity: 1;
   visibility: visible;
-} */
+} 
 
 
 /* Editing */
-[data-mkEditable].editingActive {
-  background-color: rgba(147, 172, 226, 0.712);
-}
+/* [data-mkeditable].editingActive {
+  background-color: rgba(169, 226, 147, 0.137);
+} */
 
-/* [data-mkEditable].editingActive::after {
+[data-mkeditable].editingActive::after {
   opacity: 1;
   visibility: visible;
   content: 'Editing';
-} */
+} 
 
-[data-mkEditable].editingActive::before {
+[data-mkeditable].editingActive::before {
   opacity: 1;
   visibility: visible;
 }
 
 /* when innerHtml is empty */
-[data-mkEditable].isEmpty:not(.editingActive) {
+[data-mkeditable].isEmpty:not(.editingActive) {
   height: 4px;
   min-height: 0;
   background: transparent;
+  pointer-events: none;
 }
 
-[data-mkEditable].isEmpty:not(.editingActive)::before {
+[data-mkeditable].isEmpty:not(.editingActive)::before {
   opacity: 1;
   visibility: visible;
   margin: 0;
@@ -188,7 +197,12 @@ div[data-mkEditable] {
   background: rgba(90, 103, 203, 0.2);
 }
 
-/* [data-mkEditable].isEmpty:not(.editingActive)::after {
+/* hide mask when editing */
+[data-mkeditable].editingActive::before {
+  background-color: transparent;
+}
+
+/* [data-mkeditable].isEmpty:not(.editingActive)::after {
   opacity: 1;
   visibility: visible;
   content: 'Click to edit';
@@ -200,17 +214,17 @@ div[data-mkEditable] {
   border-radius: 10px;
 }
 
-[data-mkEditable].isEmpty:not(.editingActive):hover::after {
+[data-mkeditable].isEmpty:not(.editingActive):hover::after {
   background-color: black;
   cursor: pointer;
 } */
 
-[data-mkEditable].isEmpty:not(.editingActive){
+[data-mkeditable].isEmpty:not(.editingActive){
   cursor: pointer;
 }
 
 /* all editingActive can be replaced */
-/* [data-mkEditable]:read-write:focus::after {
+/* [data-mkeditable]:read-write:focus::after {
   height: 100px;
   right: 0;
 } */

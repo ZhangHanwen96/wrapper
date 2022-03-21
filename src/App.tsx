@@ -17,14 +17,14 @@ function App() {
 				flexDirection: "column",
 			}}
 		>
-			{" "}
+			{/* {" "}
 			<h1 contentEditable>
 				<a>im link</a> / Content editable
 			</h1>
 			<button
 				contentEditable
 				className="btn"
-				data-mkEditable="button"
+				data-mkeditable="button"
 				onMouseEnter={(e): void => {
 					!editingRef.current &&
 						(e.target as HTMLButtonElement).classList.add(
@@ -72,7 +72,7 @@ function App() {
 			>
 				Subscribe Now
 			</button>
-			<hr />
+			<hr /> */}
 			<Editor />
 		</div>
 	);
