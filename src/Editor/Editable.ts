@@ -1,4 +1,4 @@
-import { wrap } from "./utils";
+import { wrap, unwrap } from "./utils";
 import { MKClass } from "./constant";
 
 const EMPTY_CONTENT_PROMPT = {
@@ -8,18 +8,56 @@ const EMPTY_CONTENT_PROMPT = {
 	default: "Click to Edit",
 };
 
-type TagName = "button" | "text" | "form";
+enum TagName {
+	button = "button",
+	text = "text",
+	form = "form",
+}
 
-export abstract class AbstractEditable extends EventTarget {
+enum EmptyAction {
+	remain = "remain",
+	collapse = "collapse",
+}
+
+enum PositionType {
+	fixed = "fixed",
+}
+
+export const eventEmitter = new EventTarget();
+
+// TODO fix sticky tab positioning
+export abstract class AbstractEditable {
+	/** HTMLElement which the Editable manipulates */
+	protected node: HTMLElement;
+
+	/** Editable current being edited */
 	static activeEditable: AbstractEditable | null;
 
-	// private editing: boolean = false;
-	private tagName: TagName;
+	/** Instance of EventTarget for listening to and dispatching events */
+	protected _eventEmitter: EventTarget = eventEmitter;
 
-	constructor(protected node: HTMLElement) {
-		super();
+	/** Whether innerHTML is empty */
+	protected isEmpty: boolean = false;
+
+	/** Enum TagName */
+	protected tagName: TagName;
+
+	/** Enum PositionType, currently used specificly for sticky-tab */
+	protected positionType: PositionType | null;
+
+	/** Action to take when innerHTML is empty. 'collapse' as default */
+	protected emptyAction: EmptyAction;
+
+	constructor(node: HTMLElement) {
 		this.node = node;
-		this.tagName = node.dataset.mkeditable as TagName;
+
+		this.tagName = (node.dataset.mkeditable as TagName) || TagName.text;
+		this.positionType = node.getAttribute(
+			"mkeditable-position"
+		) as PositionType;
+		this.emptyAction =
+			(node.getAttribute("mkeditable-emptyaction") as EmptyAction) ||
+			EmptyAction.collapse;
 
 		this.handleMouseEnter = this.handleMouseEnter.bind(this);
 		this.handleMouseLeave = this.handleMouseLeave.bind(this);
@@ -29,16 +67,60 @@ export abstract class AbstractEditable extends EventTarget {
 	}
 
 	static resetEditable() {
-		// AbstractEditable.activeEditable?.setEditing(false);
-		AbstractEditable.activeEditable = null;
+		this.activeEditable = null;
+	}
+
+	static get eventEmitter() {
+		return eventEmitter;
+	}
+
+	resetClass() {
+		const classes = ["editingActive", "hoverActive"];
+		classes.forEach((cls) => this.node.classList.remove(cls));
+
+		if (this.emptyAction === "remain" && this.isEmpty) {
+			this.node.classList.add("hoverActive");
+		}
 	}
 
 	public initialize() {
 		this.attachEvents();
 		this.prepareEditorDom();
+		this.checkEmptyHTML();
 	}
 
+	/**
+	 * Wrap [data-mkeditable] with div.mkeditable-wrapper
+	 * Insert child status el after [data-mkeditable]
+	 * Adjust badge position
+	 */
 	protected prepareEditorDom() {
+		this.wrap();
+		// this.adjustBadgePosition()
+	}
+
+	public adjustBadgePosition(container: HTMLElement) {
+		// TODO adjust badge position according to its position
+		if (this.positionType) {
+			const rect = this.node.getBoundingClientRect();
+			if (
+				rect.bottom === container.clientHeight ||
+				rect.right === container.clientWidth
+			) {
+				return;
+			}
+			this.node.classList.add("badge-bottom");
+		}
+	}
+
+	public wrap() {
+		if (
+			this.node.parentElement?.classList.contains(
+				MKClass.mkEditableWrapper
+			)
+		)
+			return;
+
 		// add mkeditable-wrapper and status
 		const wrapper = document.createElement("div");
 		wrapper.classList.add(MKClass.mkEditableWrapper);
@@ -49,7 +131,7 @@ export abstract class AbstractEditable extends EventTarget {
 		statusDiv.innerHTML = EMPTY_CONTENT_PROMPT[this.tagName || "default"];
 		wrapper.appendChild(statusDiv);
 
-		// .status handle click only empty
+		// '.status' handle click when isEmpty, expend its paired Editable
 		statusDiv.addEventListener("click", this.handleStatusClick);
 	}
 
@@ -69,6 +151,22 @@ export abstract class AbstractEditable extends EventTarget {
 		this.detachEvents();
 		const statusEl = this.node.nextElementSibling;
 		statusEl?.removeEventListener("click", this.handleStatusClick);
+
+		this.unwrap();
+	}
+
+	public unwrap() {
+		const wrapper = this.node.parentElement;
+		if (
+			!wrapper ||
+			!wrapper.classList.contains(MKClass.mkEditableWrapper)
+		) {
+			return;
+		}
+
+		const lastEl = wrapper.lastElementChild;
+		lastEl && wrapper.removeChild(lastEl);
+		unwrap(wrapper);
 	}
 
 	protected detachEvents() {
@@ -91,6 +189,9 @@ export abstract class AbstractEditable extends EventTarget {
 
 		if (value == false) {
 			this.node.classList.remove("editingActive");
+			if (this.emptyAction === "remain" && this.isEmpty) {
+				this.node.classList.add("hoverActive");
+			}
 			return;
 		}
 		AbstractEditable.activeEditable = this;
@@ -112,53 +213,60 @@ export abstract class AbstractEditable extends EventTarget {
 
 	protected handleClick(): boolean | void {
 		if (AbstractEditable.activeEditable) {
-			// this.editing
 			if (AbstractEditable.activeEditable === this) return true;
 			AbstractEditable.activeEditable.setEditing(false);
 		}
+
+		eventEmitter.dispatchEvent(
+			new CustomEvent("start_editing", {
+				detail: {
+					editable: this,
+				},
+			})
+		);
 
 		this.setEditing(true);
 	}
 
 	protected handleMouseEnter() {
-		// const target = this.node;
 		// only set when not current editing element or is self
 		(!AbstractEditable.activeEditable ||
-			AbstractEditable.activeEditable !== this) &&
+			AbstractEditable.activeEditable !== this ||
+			(!this.isEmpty && this.emptyAction === "remain")) &&
 			this.setIsHover(true);
 	}
 
 	protected handleMouseLeave() {
-		// const target = this.node;
 		// only set when not current editing element or is self
 		(!AbstractEditable.activeEditable ||
-			AbstractEditable.activeEditable !== this) &&
+			AbstractEditable.activeEditable !== this ||
+			(!this.isEmpty && this.emptyAction === "remain")) &&
 			this.setIsHover(false);
 	}
 
 	protected handleStatusClick() {
-		const target = this.node;
-
 		// only work when target el is empty
-		if (target.classList.contains("isEmpty")) {
+		if (this.node.classList.contains("isEmpty")) {
 			this.handleClick();
 			this.node.focus();
 		}
 	}
 
 	protected handleInput(e: Event) {
-		const target = this.node;
+		this.checkEmptyHTML();
+	}
 
+	protected checkEmptyHTML() {
 		const isEmpty =
-			target.innerHTML === "" ||
-			target.innerHTML.replace(/s/, "") === "<br>";
+			this.node.innerHTML === "" ||
+			this.node.innerHTML.replace(/s/, "") === "<br>";
 
 		if (isEmpty) {
-			console.log("woops empty content");
+			console.log("woops! Empty content.");
 
 			// when innerHtml is empty, will auto insert <br>
-			if (target.innerHTML.replace(/s/, "") === "<br>") {
-				target.innerHTML = "";
+			if (this.node.innerHTML.replace(/s/, "") === "<br>") {
+				this.node.innerHTML = "";
 			}
 			this.setIsEmpty(true);
 		} else {
@@ -175,6 +283,10 @@ export abstract class AbstractEditable extends EventTarget {
 	}
 
 	private setIsEmpty(empty: boolean) {
+		this.isEmpty = empty;
+
+		if (this.emptyAction === "remain") return;
+
 		if (empty) {
 			this.node.classList.add("isEmpty");
 		} else {
@@ -214,6 +326,10 @@ export class FormEditable extends AbstractEditable {
 
 	protected prepareEditorDom() {
 		super.prepareEditorDom();
+	}
+
+	public wrap() {
+		super.wrap();
 
 		// readonly input el
 		const inputEls = this.node.querySelectorAll("input");
@@ -221,13 +337,37 @@ export class FormEditable extends AbstractEditable {
 			el.setAttribute("readonly", "true");
 		});
 	}
-
-	public dispatch(event: any) {
-		switch (event.type) {
-			case "add_new_field":
-				break;
-			default:
-				return;
-		}
-	}
 }
+
+export const initializeEditables = (
+	elements: HTMLElement[],
+	container?: HTMLDivElement | null
+): AbstractEditable[] => {
+	let editalbeList: AbstractEditable[] = [];
+
+	elements.forEach((el) => {
+		editalbeList.push(initializeEditable(el as HTMLElement));
+	});
+
+	// wait for all dom elements rendered
+	container &&
+		editalbeList.forEach((editable) => {
+			editable.adjustBadgePosition(container);
+		});
+
+	return editalbeList;
+};
+
+export const initializeEditable = (el: HTMLElement): AbstractEditable => {
+	let editable: AbstractEditable;
+
+	if (el.nodeName === "FORM") {
+		editable = new FormEditable(el as HTMLElement);
+	} else {
+		editable = new BasicEditable(el as HTMLElement);
+	}
+
+	editable.initialize();
+
+	return editable;
+};

@@ -9,6 +9,8 @@ import React, {
 	useCallback,
 } from "react";
 import { render, unmountComponentAtNode } from "react-dom";
+import { useUpdateEffect } from "react-use";
+import StickyTab from "./StickyTab";
 
 const Button = () => {
 	return (
@@ -30,51 +32,87 @@ const Text2 = () => {
 	return <h2 data-mkeditable="text" className="isEmpty"></h2>;
 };
 
-const emitter = new EventTarget();
+const FormComp = ({ num }: { num: number }) => {
+	return (
+		<form data-mkeditable="form">
+			<div>
+				<input type="text" />
+				<input type="text" />
+			</div>
+			<input type="text" />
+			<div>{num}</div>
+		</form>
+	);
+};
+
+const eventEmitter = new EventTarget();
+
+type EventDetail = {
+	json: number;
+	fn: VoidFunction;
+};
 
 const UI = forwardRef((props, ref) => {
 	const [state, setState] = useState(0);
-	console.log(state);
+	const fnRef = useRef<VoidFunction>();
+
 	useImperativeHandle(ref, () => ({
-		update: setState,
+		update: ({ json, fn }: { json: number; fn: VoidFunction }) => {
+			setState(json);
+			fnRef.current = fn;
+		},
 	}));
 
-	useEffect(() => {}, []);
+	useUpdateEffect(() => {
+		fnRef.current && fnRef.current();
+	}, [state]);
 
 	return (
-		<div>
-			{state === 0 ? <Text /> : <Button />}
-			<div>{state}</div>
+		<div
+			style={{
+				width: 300,
+				display: "flex",
+				justifyItems: "center",
+				alignItems: "center",
+				flexDirection: "column",
+			}}
+		>
+			<Button />
+			<Text />
+			<Text2 />
+			<FormComp num={state} />
+			<StickyTab position="right" />
 		</div>
 	);
 });
 
-const Wrapper = () => {
-	const controlref = useRef<{ update: (args: any) => void }>();
+const UIWrapper = () => {
+	const UIRef = useRef<{ update: (detail: EventDetail) => void }>();
 
-	const handler = useCallback((e: Event) => {
-		console.log("updateing", (e as CustomEvent).detail.json);
-		controlref.current?.update((e as CustomEvent).detail.json);
-	}, []);
+	const handler = useCallback((e: CustomEvent<EventDetail>) => {
+		console.log("updateing", e.detail.json);
+
+		UIRef.current?.update(e.detail);
+	}, []) as EventListener;
 
 	useEffect(() => {
-		emitter.addEventListener("update", handler);
+		eventEmitter.addEventListener("update", handler);
 
 		return () => {
-			emitter.removeEventListener("update", handler);
+			eventEmitter.removeEventListener("update", handler);
 		};
 	}, []);
 
-	return <UI ref={controlref} />;
+	return <UI ref={UIRef} />;
 };
 
 export const mount = (root: HTMLElement, cb: (...args: any) => void) => {
-	render(<Wrapper />, root, cb);
+	render(<UIWrapper />, root, cb);
 
 	return {
-		update: (json: number) => {
-			emitter.dispatchEvent(
-				new CustomEvent("update", { detail: { json } })
+		update: (json: number, fn: VoidFunction) => {
+			eventEmitter.dispatchEvent(
+				new CustomEvent("update", { detail: { json, fn } })
 			);
 		},
 		unmount: () => {

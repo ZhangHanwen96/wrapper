@@ -1,3 +1,8 @@
+body{
+  margin: 0;
+  padding: 0;
+}
+
 h1,
 p {
   font-family: Lato;
@@ -19,6 +24,9 @@ border-radius: 8px; */
   --badge-bg: #5A67CB;
   --mask-offsetMargin: 2;
   --selection-color: #2c6ecb1c;
+
+  --edit-prompt: 'Click to Edit';
+  --editing-status: 'Edit mode';
 }
 
 .mkeditable-wrapper {
@@ -103,6 +111,10 @@ div[data-mkeditable] {
   color: white;
 }
 
+[data-mkeditable='form']{
+  min-height: 20px;
+}
+
 /* mask */
 [data-mkeditable]::before {
   content: '';
@@ -153,13 +165,31 @@ div[data-mkeditable] {
   color: white;
 }
 
+/* control the position of editing status badge */
+
+/* 
+.badge-top[data-mkeditable]::after {
+  top: 0;
+  transform: translateY(calc(-100% - 2px));
+} */
+
+
+.badge-bottom[data-mkeditable]::after {
+  top: auto;
+  bottom: 0;
+  transform: translateY(calc(100% + 2px));
+  border-radius: 0 0 4px 4px;
+}
+
 [data-mkeditable].hoverActive::before {
   opacity: 1;
   visibility: visible;
 }
 
+/* hover status */
+
 [data-mkeditable].hoverActive::after {
-  content: 'click to edit';
+  content: var(--edit-prompt);
   opacity: 1;
   visibility: visible;
 } 
@@ -173,7 +203,7 @@ div[data-mkeditable] {
 [data-mkeditable].editingActive::after {
   opacity: 1;
   visibility: visible;
-  content: 'Editing';
+  content: var(--editing-status);
 } 
 
 [data-mkeditable].editingActive::before {
